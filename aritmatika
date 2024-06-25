@@ -1,0 +1,195 @@
+#include <iostream>
+#include <chrono>
+#include <algorithm>
+#include <random>
+#include <vector>
+#include <iomanip>
+
+using namespace std;
+
+// Function prototypes
+void bubbleSort(int arr[], int n);
+void insertionSort(int arr[], int n);
+void selectionSort(int arr[], int n);
+void mergeSort(int arr[], int l, int r);
+void quickSort(int arr[], int low, int high);
+void merge(int arr[], int l, int m, int r);
+int partition(int arr[], int low, int high);
+
+// Utility function to measure sorting time
+double measureSortingTime(void (*sortFunc)(int[], int), int arr[], int n) {
+    auto start = chrono::steady_clock::now();
+    sortFunc(arr, n);
+    auto end = chrono::steady_clock::now();
+    chrono::duration<double, micro> duration = end - start;
+    return duration.count();
+}
+
+// Bubble Sort implementation
+void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}
+
+// Insertion Sort implementation
+void insertionSort(int arr[], int n) {
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}
+
+// Selection Sort implementation
+void selectionSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        int min_idx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j] < arr[min_idx]) {
+                min_idx = j;
+            }
+        }
+        swap(arr[min_idx], arr[i]);
+    }
+}
+
+// Merge function used in Merge Sort
+void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1;
+    int n2 = r - m;
+    int L[n1], R[n2];
+    for (int i = 0; i < n1; i++)
+        L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++)
+        R[j] = arr[m + 1 + j];
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        } else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+// Merge Sort implementation
+void mergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = l + (r - l) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}
+
+// Partition function used in Quick Sort
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = (low - 1);
+    for (int j = low; j < high; j++) {
+        if (arr[j] < pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return (i + 1);
+}
+
+// Quick Sort implementation
+void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+// Generate random data
+void generateRandomData(int arr[], int n) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dis(1, 10000);
+    for (int i = 0; i < n; i++) {
+        arr[i] = dis(gen);
+    }
+}
+
+// Generate reverse sorted data
+void generateReverseData(int arr[], int n) {
+    for (int i = 0; i < n; i++) {
+        arr[i] = n - i;
+    }
+}
+
+// Generate sorted data
+void generateSortedData(int arr[], int n) {
+    for (int i = 0; i < n; i++) {
+        arr[i] = i + 1;
+    }
+}
+
+// Function to run and measure sorting algorithms
+void runAndMeasureSorts(const vector<int>& sizes, void (*dataGenerator)(int[], int), const string& dataType) {
+    cout << "Testing on " << dataType << " data:" << endl;
+    cout << left << setw(15) << "Algorithm"
+         << setw(15) << "N=10 (μs)"
+         << setw(15) << "N=100 (μs)"
+         << setw(15) << "N=500 (μs)"
+         << setw(15) << "N=1000 (μs)"
+         << setw(15) << "N=10000 (μs)"
+         << endl;
+
+    auto runTest = [](void (*sortFunc)(int[], int), const string& name, const vector<int>& sizes, void (*dataGenerator)(int[], int)) {
+        cout << left << setw(15) << name;
+        for (int n : sizes) {
+            int* arr = new int[n];
+            dataGenerator(arr, n);
+            double duration = measureSortingTime(sortFunc, arr, n);
+            cout << setw(15) << duration;
+            delete[] arr;
+        }
+        cout << endl;
+    };
+
+    // Run tests
+    runTest(bubbleSort, "Bubble Sort", sizes, dataGenerator);
+    runTest(insertionSort, "Insertion Sort", sizes, dataGenerator);
+    runTest(selectionSort, "Selection Sort", sizes, dataGenerator);
+    runTest([](int arr[], int n) { mergeSort(arr, 0, n - 1); }, "Merge Sort", sizes, dataGenerator);
+    runTest([](int arr[], int n) { quickSort(arr, 0, n - 1); }, "Quick Sort", sizes, dataGenerator);
+
+    cout << endl;
+}
+
+int main() {
+    const vector<int> sizes = {10, 100, 500, 1000, 10000};
+
+    runAndMeasureSorts(sizes, generateRandomData, "random");
+    runAndMeasureSorts(sizes, generateReverseData, "reverse sorted");
+    runAndMeasureSorts(sizes, generateSortedData, "already sorted");
+
+    return 0;
+}
